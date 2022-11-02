@@ -1,6 +1,6 @@
 {
   "canisters": {
-    "ICP_backend": {
+    "Test": {
       "main": "test.mo",
       "type": "motoko"
     }
