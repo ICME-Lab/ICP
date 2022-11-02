@@ -28,7 +28,7 @@ module {
     });
   };
   /* credit https://github.com/dfinance-tech/motoko-token/blob/ledger/src/Utils.mo */
-  public func decode(t : Text) : [Nat8] {
+  public func decode(t : Text) : ?[Nat8] = do? {
     var map = HashMap.HashMap<Nat, Nat8>(1, Nat.equal, Hash.hash);
     // '0': 48 -> 0; '9': 57 -> 9
     for (num in Iter.range(48, 57)) {
@@ -45,12 +45,12 @@ module {
     let p = Iter.toArray(Iter.map(Text.toIter(t), func (x: Char) : Nat { Nat32.toNat(Char.toNat32(x)) }));
     var res : [var Nat8] = [var];       
     for (i in Iter.range(0, 31)) {            
-        let a = Option.unwrap(map.get(p[i*2]));
-        let b = Option.unwrap(map.get(p[i*2 + 1]));
+        let a = map.get(p[i*2])!;
+        let b = map.get(p[i*2 + 1])!;
         let c = 16*a + b;
         res := Array.thaw(Array.append(Array.freeze(res), Array.make(c)));
     };
     let result = Array.freeze(res);
-    return result;
+    return ?result;
   };
 };
