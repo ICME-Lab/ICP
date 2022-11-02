@@ -15,7 +15,7 @@ import CRC32 "./CRC32";
 import Hex "./Hex";
 
 module {
-  public type AccountIdentifier = Text;
+  public type AccountIdentifier = Blob;
   public type SubAccount = [Nat8];
   
   
@@ -39,7 +39,7 @@ module {
     };
     var hash : [Nat8] = SHA224.sha224(Array.append(Array.append(ads, data), _sa));
     var crc : [Nat8] = CRC32.crc32(hash);
-    return Hex.encode(Array.append(crc, hash));
+    return Blob.fromArray(Array.append(crc, hash));
   };
   
   public let equal = Text.equal;
