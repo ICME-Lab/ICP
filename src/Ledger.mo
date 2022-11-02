@@ -39,12 +39,6 @@ module {
     #Ohter: Text;
   };
 
-  public type Entries = {
-    controller: Principal;
-    ledgerCanisterId: Principal;
-    gas: Nat64;
-  };
-
   /* Utls functions */
   public func toSubAccount(principal : Principal) : [Nat8] {
     let sub_nat32byte : [Nat8] = Blob.toArray(Text.encodeUtf8(Principal.toText(principal)));
@@ -57,22 +51,37 @@ module {
     return AID.fromPrincipal(p, ?subAccount);
   };
 
-  public func defaultLedgerCanisterId(): Principal {
-    Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai");
-  };
-  public func defaultLedgerGas(): Nat64 {
-    10_000;
-  };
+
+  /*
+  -- ledger sending template --
+
+  dfx identity use default
+  export SEND_TO_ACC=$(dfx ledger account-id)
+
+  # mint
+  dfx identity use minter
+  dfx canister call ledger send_dfx \
+  '(
+      record {
+          memo = 1 : nat64;
+          amount = record {e8s = 1_000 : nat64};
+          fee = record {e8s = 0 : nat64};
+          to =  "'${DEFAULT_ACC}'"
+      }
+  )'
+  dfx identity use default
+
+  */
 
 
   /* Class */
-  public class Ledger(_ledgerCanisterId: Principal) {
+  public class Ledger() {
 
-    var ledgerCanisterId: Principal = _ledgerCanisterId;
-    var gas: Nat64 = 10_000;
+    public var ledgerCanister : Interface = actor("ryjl3-tyaaa-aaaaa-aaaba-cai");
 
-    let ledger : Interface = actor(Principal.toText(ledgerCanisterId));
     let SUBACCOUNT_ZERO : [Nat8] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    let gas: Nat64 = 10_000;
+
     func controllerAccountId(controller: Principal): Blob = toBlobAccountId(controller, SUBACCOUNT_ZERO);
 
 
@@ -81,7 +90,7 @@ module {
       toTextPaymentAccountId(controller, userPrincipal)
     };
 
-    public func takeinPayment(controller: Principal, userPrincipal: Principal): async Result.Result<(BlockIndex, Tokens), Error> {// ここの型を後で変える．
+    public func takeinPayment(controller: Principal, userPrincipal: Principal): async Result.Result<(BlockIndex, Tokens), Error> {
       let subAccount = toSubAccount(userPrincipal);
       let paymentBlobAccountId = toPaymentBlobAccountId(controller, userPrincipal);
       let accountBalance = await balanceOfAccountId(paymentBlobAccountId);
@@ -98,7 +107,7 @@ module {
         to: BlobAccountIdentifier = controllerAccountId(controller);
         created_at_time: ?TimeStamp = null;
       };
-      switch(await ledger.transfer(args)) {
+      switch(await ledgerCanister.transfer(args)) {
         case (#Err(e)) return #err(#Transfer(e));
         case (#Ok(o)) return #ok(o, transferAmount);
       }
@@ -123,7 +132,7 @@ module {
         to: BlobAccountIdentifier = Blob.fromArray(blobAccountId);
         created_at_time: ?TimeStamp = null;
       };
-      switch(await ledger.transfer(args)) {
+      switch(await ledgerCanister.transfer(args)) {
         case (#Err(e)) return #err(#Transfer(e));
         case (#Ok(o)) return #ok((o, transferAmount))
       }
@@ -139,7 +148,7 @@ module {
     };
 
     func balanceOfAccountId(blobAccountId: BlobAccountIdentifier): async Tokens {
-      await ledger.account_balance({
+      await ledgerCanister.account_balance({
         account = blobAccountId;
       });
     };
